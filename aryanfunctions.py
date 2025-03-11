@@ -140,49 +140,47 @@ def place_order_equity_dict(brokerobject,response_dict,sym,exc="NSE"):
         else:
             print(f"Order placement failed: {orderid}")
 
-def fetchSecurityKey(response):
-    global token_list
-    token_list=[]
-    data=response
-#     data = request.json
-#     print("recieved subscribing data ", data)
+# def fetchSecurityKey(response):
+#     global token_list
+#     token_list=[]
+#     data=response
+# #     data = request.json
+# #     print("recieved subscribing data ", data)
     
-    for sym in data.keys():
-        securityid=get_equitytoken(sym)
+#     for id in data.keys():
+#         sym = 
+#         securityid=get_equitytoken(sym)
 
-        data[sym]['securityId'] = securityid
-        token_list.append(securityid)
-    subscribeList=[{"exchangeType":1,"tokens":token_list}]
-    subscribeSymbol(subscribeList,SMART_WEB)
-    time.sleep(2)
+#         data[sym]['securityId'] = securityid
+#         token_list.append(securityid)
+#     subscribeList=[{"exchangeType":1,"tokens":token_list}]
+#     subscribeSymbol(subscribeList,SMART_WEB)
+#     time.sleep(2)
 
-    return data
+#     return data
 
 def update_ltp(response:list):
-    try:
-        
-        global trade_count,token_list
-               
-        for sym_dict in response:
-            
-            sym=list(sym_dict.keys())[0]
-            token=sym_dict[sym]['securityId']
-                        
-            if token not in token_dict:
-                token_list.append(token)
-                subscribeList=[{"exchangeType":1,"tokens":token_list}]
-                subscribeSymbol(subscribeList,SMART_WEB)
-                time.sleep(5)
+    global trade_count,token_list
+    for sym_dict in response:
 
-            sym_ltp=token_dict[token]
-            sym_dict[sym]['ltp']=sym_ltp
-            # sym_dict[sym]['trade_count']=0
-            
+        sym=list(sym_dict.keys())[0]
+        token=sym_dict[sym]['securityId']
 
-            # print("179:",response)    
-            # print("180:",sym_dict)
-            # print("181:",sym_dict[sym]['entry'],trade_count)
-        return response 
+        if token not in token_dict:
+            token_list.append(token)
+            subscribeList=[{"exchangeType":1,"tokens":token_list}]
+            subscribeSymbol(subscribeList,SMART_WEB)
+            time.sleep(5)
+
+        sym_ltp=token_dict[token]
+        sym_dict[sym]['ltp']=sym_ltp
+        # sym_dict[sym]['trade_count']=0
+
+
+        # print("179:",response)
+        # print("180:",sym_dict)
+        # print("181:",sym_dict[sym]['entry'],trade_count)
+    return response
     #         if sym_dict[sym]["entry"]!=""  and sym_dict[sym]['entryId']=="":
                
     #             sym_dict[sym]["entry"]=float(sym_dict[sym]["entry"])
@@ -198,9 +196,9 @@ def update_ltp(response:list):
     #             print("198:",sym_dict)
     #             return sym_dict
  
-    except Exception as e:
-            print("errror ", e)
-            return e  
+#     except Exception as e:
+#             print("errror ", e)
+#             return e
                        # print(response)
      
     # print("203:",response)
