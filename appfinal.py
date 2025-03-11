@@ -1,5 +1,4 @@
 import eventlet
-
 eventlet.monkey_patch()
 from flask import Flask, request, jsonify
 from markupsafe import escape
@@ -23,12 +22,14 @@ ltp_state = []
 
 
 def call_updateddata(data: list):
+    global order_state, request_state
     try:
-        # print("19:",data)  
-        updatedData = update_ltp(data)
+        print(data)
+        updatedData, order_state = update_ltp(data, order_state, request_state)
+        if (len(order_state) > 1):
+            print(f"order_state {order_state}")
+            socketio.emit('orderExecuted', order_state)
 
-        # if updatedData!='':
-        # print(f"Updated data: {updatedData}")
 
     except Exception as e:
 
@@ -61,25 +62,11 @@ def fetchSecurityKey():
 
 
 def fetch_ltp_post(data):
-    # print(f"Received data: {data}")
-    # for sym in data.keys():
-    #     if "Securityid" not in data[sym].keys():
-    #         # print(const_response[sym].keys())
-    #         data[sym]['Securityid'] = ''
-    # time.sleep(5)
-    # print("76:", data)
     if data == []:
         return data
     
-    # sys.exit()
     final_updated_data = call_updateddata(data)
-    # print("78:", final_updated_data)
     return final_updated_data
-    # print(f"32:Updated data: {data}")
-    # Mock response:
-
-    # time.sleep(5)
-    # logging.info(f"{data}")ḥ
 
 
 # @app.route('/index', methods=["GET"])
@@ -124,22 +111,11 @@ def handle_start_ltp(data):
     global request_state, order_state, ltp_state
     if not data.get('requestState'):
         return
-    
-    request_state = data['requestState']
 
-    if order_state == [] and ltp_state == []:
+    if ltp_state == []:
         for item in request_state:
             symbol = list(item.keys())[0]
-            order = {
-                "id": item[symbol]["id"],
-                "entryPrice": "",
-                "exitPrice": "",
-                "entryStatus": "",
-                "exitStatus": "",
-                "securityId": item[symbol]["securityId"]
-            }
-            order_state.append({symbol: order})
-
+    
             ltp = {
                 "id": item[symbol]["id"],
                 "ltp": "",
@@ -149,8 +125,12 @@ def handle_start_ltp(data):
 
     print("LTP Monitoring Started:", ltp_state)
 
+    
+    request_state = data['requestState']
     eventlet.spawn_n(emit_ltp_updates)  # Use eventlet.spawn_n to prevent blocking
   # Start background LTP updates
+
+
 
 
 def emit_ltp_updates():
@@ -164,31 +144,9 @@ def emit_ltp_updates():
             if ltp_state:
                 # Emit updated LTP state
                 socketio.emit('ltpUpdate', {
-                    'ltpState': ltp_state,
-                    'requestState': request_state,
-                    'orderState': order_state
+                    'ltpState': ltp_state
                 })
-                for symbol_data in ltp_state:
-                    symbol = list(symbol_data.keys())[0]
-                    new_ltp = symbol_data[symbol]["ltp"]
-
-                    # Update ltp_state
-                    for item in ltp_state:
-                        if symbol in item:
-                            item[symbol]["ltp"] = new_ltp
-
-                    # Check for order execution
-                    for item in order_state:
-                        if symbol in item:
-                            order = item[symbol]
-                            entry_price = request_state[0].get(symbol, {}).get("entryPrice", None)
-
-                            if entry_price and new_ltp >= entry_price:
-                                print("Entry Condition Met for", symbol)
-                                order["entryStatus"] = "BUY_EXECUTED"
-                                order["entryPrice"] = new_ltp
-                                socketio.emit('orderExecuted', order)
-
+                
             
             # eventlet.sleep(3)  # Sleep for 3 seconds before next update
 
