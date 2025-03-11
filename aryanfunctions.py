@@ -4,8 +4,9 @@ from configaryan1812 import *
 import logging,threading,time,sys
 import pandas as pd
 from datetime import datetime
+import random
 import os
-
+order_lock = threading.Lock()
 def login():
     """This fx enables user to login and create two objects ie smartApi and sws(for websocket)"""
 
@@ -158,7 +159,7 @@ def connectFeed(sws,tokeList =None):
 #     time.sleep(2)
 
 #     return data
-tradeCount = 0
+
 def check_entry_occured_or_not(sym, order_state, request_state):
     try:
         if order_state == []:
@@ -167,56 +168,66 @@ def check_entry_occured_or_not(sym, order_state, request_state):
             # print("1234", sym)
             if list(e.keys())[0] == sym:
                 return "PLACED"
-            return "PENDING"
+        return "PENDING"
     except Exception as e:
         print("168", e)
         
         
 
 def update_ltp(response:list, order_state, request_state): 
-    global token_list
-    global tradeCount
+    global token_list, order_lock
     # print("hehehhe", response)
     for sym_dict in response:
         print("sub dict", sym_dict)
         sym=list(sym_dict.keys())[0]
-        token=sym_dict[sym]['securityId']
-        entry = sym_dict[sym]['entry']
-        order_type = sym_dict[sym]['orderType']
-        target = sym_dict[sym]['target']
-        qty = sym_dict[sym]['qty']
-        sl = sym_dict[sym]['sl']
-        
-        
-        if token not in token_dict:
-            token_list.append(token)
-            subscribeList=[{"exchangeType":1,"tokens":token_list}]
-            subscribeSymbol(subscribeList,SMART_WEB)
-            # time.sleep(5)
+    
+        print("sysys", sym_dict[sym])
         try:
-            sym_ltp=token_dict[token]
-            sym_dict[sym]['ltp']=sym_ltp
-            sym_ltp = int(sym_ltp)
-            # print(f"response {sym_dict}")
-            if not (entry == "" or target == "" or qty == "" or sl == ""):   
-                # print("entered in the order area") 
-                occured_or_not = check_entry_occured_or_not(sym, order_state, request_state)
-                print(occured_or_not)
-                if occured_or_not == "PENDING":
-                    print(f"type: {order_type} entry: {int(entry)} ltp: {(sym_ltp)}")
-                    if (order_type == "BUY" and int(entry) > int(sym_ltp)) or (order_type == "SELL" and int(entry) < int(sym_ltp)):
-                        print("Final destination")
-                        tradeCount += 1
-                        if (tradeCount % 2 == 1):
-                            order_state = place_order_equity_dict(SMART_API_OBJ, token, sym, order_type, "ENTRY", sym_ltp, qty, order_state=order_state)  
-                elif occured_or_not == "PLACED":
-                    if (order_type == "BUY" and sym_ltp > int(target)) or (order_type == "BUY" and sym_ltp < int(sl)):
-                        order_state =place_order_equity_dict(SMART_API_OBJ, token, sym, order_type="SELL", entry_or_exit="EXIT", ltp=sym_ltp, qty=qty, order_state=order_state)
-                    
-                    if (order_type == "SELL" and sym_ltp < int(target)) or (order_type == "SELL" and sym_ltp > int(sl)):
-                        order_state = place_order_equity_dict(SMART_API_OBJ, token, sym, order_type="BUY", entry_or_exit="EXIT", ltp=sym_ltp, qty=qty, order_state=order_state)
+            token=sym_dict[sym]['securityId']
+            entry = sym_dict[sym]['entry']
+            order_type = sym_dict[sym]['orderType']
+            target = sym_dict[sym]['target']
+            qty = sym_dict[sym]['qty']
+            sl = sym_dict[sym]['sl']
         except Exception as error:
-            print("error", error)           
+            print(f"hererhelrh", sym, token, entry, order_type, target, qty, sl)
+            return response, order_state
+        else:
+            try: 
+                print(token_dict)
+                if token not in token_dict:
+                    token_list.append(token)
+                    subscribeList=[{"exchangeType":1,"tokens":token_list}]
+                    subscribeSymbol(subscribeList,SMART_WEB)
+                    # time.sleep(5)
+            
+                sym_ltp=token_dict[token]
+                print("d", sym_ltp)
+                sym_dict[sym]['ltp']=sym_ltp
+                sym_ltp = float(sym_ltp)
+                print(f"response {sym_dict, sym_ltp, entry, target}")
+                if not (entry == "" or target == "" or qty == "" or sl == ""): 
+                    with order_lock:  
+                        print("entered in the order area", order_state)
+    
+                        occured_or_not = check_entry_occured_or_not(sym, order_state, request_state)
+                        print(occured_or_not)
+                        if occured_or_not == "PENDING":
+                            print(f"type: {order_type} entry: {int(entry)} ltp: {(sym_ltp)}")
+                            if (order_type == "BUY" and float(entry) > sym_ltp) or (order_type == "SELL" and float(entry) < sym_ltp):
+                                print("Final destination")
+                                order_state = place_order_equity_dict(SMART_API_OBJ, token, sym, order_type, "ENTRY", sym_ltp, qty, order_state=order_state)  
+                                print("After placing order ", order_state, response)
+                    
+                        elif occured_or_not == "PLACED":
+                            if (order_type == "BUY" and sym_ltp > float(target)) or (order_type == "BUY" and sym_ltp < float(sl)):
+                                order_state =place_order_equity_dict(SMART_API_OBJ, token, sym, order_type="SELL", entry_or_exit="EXIT", ltp=sym_ltp, qty=qty, order_state=order_state)
+                                
+                            if (order_type == "SELL" and sym_ltp < float(target)) or (order_type == "SELL" and sym_ltp > float(sl)):
+                                order_state = place_order_equity_dict(SMART_API_OBJ, token, sym, order_type="BUY", entry_or_exit="EXIT", ltp=sym_ltp, qty=qty, order_state=order_state)
+            
+            except Exception as error:
+                print("error", error)           
     return response, order_state
 
 
@@ -261,7 +272,9 @@ def place_order_equity_dict(brokerobject, token, sym, order_type, entry_or_exit,
                     "squareoff": "0","stoploss": "0","quantity": qt}
 
         logging.info(f"ORDER PARAMETERS: {orderparams}")
-        orderid = brokerobject.placeOrder(orderparams)
+        random_number = random.randint(10**9, 10**10 - 1)
+        # orderid = brokerobject.placeOrder(orderparams)
+        orderid = random_number
         # orderid = "gjasljlasjdfl"
         
         # print("119:",orderid)
@@ -277,14 +290,15 @@ def place_order_equity_dict(brokerobject, token, sym, order_type, entry_or_exit,
                 }
                 print(f"just before appending new order, {order_state}")
                 order_state.append(order_data)
+                return order_state
                 # print(f"order_state {order_state}")
             elif(entry_or_exit == "EXIT"):
                 for e in order_state:
                     e[sym]['exitID'] = orderid
                     e[sym]['exitStatus'] = 'COMPLETED'
                     e['exitPrice'] = ltp
-            return order_state
-        return 
+                return order_state
+        
 
         # print(sym,":",orderid)
             

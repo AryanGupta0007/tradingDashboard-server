@@ -26,9 +26,8 @@ def call_updateddata(data: list):
     try:
         print(data)
         updatedData, order_state = update_ltp(data, order_state, request_state)
-        if (len(order_state) > 1):
-            print(f"order_state {order_state}")
-            socketio.emit('orderExecuted', order_state)
+        print(f"order_state after update ltp {order_state}")
+        socketio.emit('orderExecuted', order_state)
 
 
     except Exception as e:
@@ -69,7 +68,7 @@ def fetch_ltp_post(data):
     return final_updated_data
 
 
-# @app.route('/index', methods=["GET"])
+@app.route('/index', methods=["GET"])
 def get_index_values():
     global token
 
@@ -128,6 +127,7 @@ def handle_start_ltp(data):
     
     request_state = data['requestState']
     eventlet.spawn_n(emit_ltp_updates)  # Use eventlet.spawn_n to prevent blocking
+    # eventlet.spawn_n(emit_index_updates)
   # Start background LTP updates
 
 
@@ -146,6 +146,24 @@ def emit_ltp_updates():
                 socketio.emit('ltpUpdate', {
                     'ltpState': ltp_state
                 })
+
+            
+
+
+def emit_index_updates():
+    """Continuously fetch and emit index ltp updates"""
+    with app.app_context():
+        while True:
+            global price_state
+            time.sleep(1)
+            price_state = get_index_values()
+            print(f"priceState {price_state}")
+            if price_state:
+                # Emit updated LTP state
+                socketio.emit('indexUpdate', {
+                    'priceState': price_state
+                })
+                
                 
             
             # eventlet.sleep(3)  # Sleep for 3 seconds before next update
