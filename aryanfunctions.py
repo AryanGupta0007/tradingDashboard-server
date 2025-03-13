@@ -172,11 +172,26 @@ def check_entry_occured_or_not(sym, order_state, request_state):
     except Exception as e:
         print("168", e)
         
-        
 
-def update_ltp(response:list, order_state, request_state): 
+def check_exit_occured_or_not(sym, order_state, request_state):
+    try:
+        for e in order_state:
+            # print("1234", sym)
+            if list(e.keys())[0] == sym:
+                print(f"checking exit {e}")
+                if e[sym]['exitStatus'] != "PENDING": 
+                    return "PLACED"
+        return "PENDING"
+    except Exception as e:
+        print("168", e)
+
+
+
+def update_ltp(response:list, order_state, request_state, message_state): 
     global token_list, order_lock
     # print("hehehhe", response)
+    if order_state == None:
+        order_state = []
     for sym_dict in response:
         print("sub dict", sym_dict)
         sym=list(sym_dict.keys())[0]
@@ -206,29 +221,35 @@ def update_ltp(response:list, order_state, request_state):
                 sym_dict[sym]['ltp']=sym_ltp
                 sym_ltp = float(sym_ltp)
                 print(f"response {sym_dict, sym_ltp, entry, target}")
+                
                 if not (entry == "" or target == "" or qty == "" or sl == ""): 
                     with order_lock:  
                         print("entered in the order area", order_state)
     
-                        occured_or_not = check_entry_occured_or_not(sym, order_state, request_state)
-                        print(occured_or_not)
-                        if occured_or_not == "PENDING":
-                            print(f"type: {order_type} entry: {int(entry)} ltp: {(sym_ltp)}")
-                            if (order_type == "BUY" and float(entry) > sym_ltp) or (order_type == "SELL" and float(entry) < sym_ltp):
-                                print("Final destination")
-                                order_state = place_order_equity_dict(SMART_API_OBJ, token, sym, order_type, "ENTRY", sym_ltp, qty, order_state=order_state)  
-                                print("After placing order ", order_state, response)
-                    
-                        elif occured_or_not == "PLACED":
-                            if (order_type == "BUY" and sym_ltp > float(target)) or (order_type == "BUY" and sym_ltp < float(sl)):
-                                order_state =place_order_equity_dict(SMART_API_OBJ, token, sym, order_type="SELL", entry_or_exit="EXIT", ltp=sym_ltp, qty=qty, order_state=order_state)
+                        entry_occured_or_not = check_entry_occured_or_not(sym, order_state, request_state)
+                        print(entry_occured_or_not)
+                        if entry_occured_or_not == "PENDING":
                                 
-                            if (order_type == "SELL" and sym_ltp < float(target)) or (order_type == "SELL" and sym_ltp > float(sl)):
-                                order_state = place_order_equity_dict(SMART_API_OBJ, token, sym, order_type="BUY", entry_or_exit="EXIT", ltp=sym_ltp, qty=qty, order_state=order_state)
-            
+                            print(f"type: {order_type} entry: {float(entry)} ltp: {(sym_ltp)}")
+                            if ((order_type == "BUY" and float(entry) > sym_ltp) or (order_type == "SELL" and float(entry) < sym_ltp)):
+                                print("Final destination")
+                                order_state, message_state = place_order_equity_dict(SMART_API_OBJ, token, sym, order_type, "ENTRY", sym_ltp, qty, order_state=order_state, message_state=message_state)  
+                                print("After placing order ", order_state, response)
+                               
+                        elif entry_occured_or_not == "PLACED":
+                            exit_occured_or_not = check_exit_occured_or_not(sym, order_state, request_state)
+                            if (exit_occured_or_not == "PENDING"):                            
+                                if ((order_type == "BUY" and sym_ltp > float(target)) or (order_type == "BUY" and sym_ltp < float(sl))):
+                                    order_state, message_state =place_order_equity_dict(SMART_API_OBJ, token, sym, order_type="SELL", entry_or_exit="EXIT", ltp=sym_ltp, qty=qty, order_state=order_state, message_state=message_state)
+                                    
+                                if ((order_type == "SELL" and sym_ltp < float(target)) or (order_type == "SELL" and sym_ltp > float(sl))):
+                                    order_state, message_state = place_order_equity_dict(SMART_API_OBJ, token, sym, order_type="BUY", entry_or_exit="EXIT", ltp=sym_ltp, qty=qty, order_state=order_state, message_state=message_state)
+                                    
+
             except Exception as error:
-                print("error", error)           
-    return response, order_state
+                print("error", error) 
+
+    return response, order_state, message_state
 
 
 # def place_order(data):
@@ -255,7 +276,7 @@ def update_ltp(response:list, order_state, request_state):
 #     return final_updated_response
 
 
-def place_order_equity_dict(brokerobject, token, sym, order_type, entry_or_exit, ltp, qty, order_state, exc="NSE"):         
+def place_order_equity_dict(brokerobject, token, sym, order_type, entry_or_exit, ltp, qty, order_state, message_state, exc="NSE"):         
     try:
         global sym_ltp
         trans_type=order_type
@@ -273,8 +294,8 @@ def place_order_equity_dict(brokerobject, token, sym, order_type, entry_or_exit,
 
         logging.info(f"ORDER PARAMETERS: {orderparams}")
         random_number = random.randint(10**9, 10**10 - 1)
-        # orderid = brokerobject.placeOrder(orderparams)
-        orderid = random_number
+        orderid = brokerobject.placeOrder(orderparams)
+        # orderid = random_number
         # orderid = "gjasljlasjdfl"
         
         # print("119:",orderid)
@@ -290,14 +311,22 @@ def place_order_equity_dict(brokerobject, token, sym, order_type, entry_or_exit,
                 }
                 print(f"just before appending new order, {order_state}")
                 order_state.append(order_data)
-                return order_state
+                message_state.append(f"placed ENTRY -> symbol: {sym} entryID: {orderid} entryPrice: {ltp} ")
+                return order_state, message_state 
                 # print(f"order_state {order_state}")
             elif(entry_or_exit == "EXIT"):
+                print("placing exit order")
                 for e in order_state:
-                    e[sym]['exitID'] = orderid
-                    e[sym]['exitStatus'] = 'COMPLETED'
-                    e['exitPrice'] = ltp
-                return order_state
+                    if list(e.keys())[0] == sym:
+                        
+                        e[sym]['exitOrderID'] = orderid
+                        e[sym]['exitStatus'] = 'COMPLETED'
+                        e[sym]['exitPrice'] = ltp
+                        order_state.append(order_data)
+                        message_state.append(f"placed EXIT -> symbol: {sym} exitID: {orderid} exitPrice: {ltp} ")
+                
+                        print("placed exit order ", order_state, e)
+                return order_state , message_state
         
 
         # print(sym,":",orderid)
