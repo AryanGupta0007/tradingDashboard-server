@@ -1,5 +1,0 @@
-vk=[{'YESBANK': {'entry': '18', 'entryId': '', 'entryPrice': '', 'entryStatus': '', 'exitOrderId': '', 'exitPrice': '', 'exitStatus': '', 'id': 2, 'ltp': '', 'orderType': 'BUY', 'qty': '1000', 'securityId': '11915', 'sl': '15', 'target': '25'}}, {'CIPLA': {'entry': '1400', 'entryId': '', 'entryPrice': '', 'entryStatus': '', 'exitOrderId': '', 'exitPrice': '', 'exitStatus': '', 'id': 3, 'ltp': '', 'orderType': 'BUY', 'qty': '10', 'securityId': '694', 'sl': '1000', 'target': '2000'}}, {'HDFCBANK': {'entry': '1100', 'entryId': '', 'entryPrice': '', 'entryStatus': '', 'exitOrderId': '', 'exitPrice': '', 'exitStatus': '', 'id': 4, 'ltp': '', 'orderType': 'BUY', 'qty': '5', 'securityId': '1333', 'sl': '1000', 'target': '2000'}}, {'SBIN': {'qty': '7', 'orderType': 'BUY', 'entry': '800', 'target': '1000', 'sl': '725', 'ltp': '', 'entryId': '', 'exitOrderId': '', 'entryPrice': '', 'exitPrice': '', 'entryStatus': '', 'exitStatus': '', 'id': 1}}]
-for i in vk:
-     sym=list(i.keys())[0]
-     sym_token=
-     print(sym)
