@@ -2,8 +2,8 @@ import eventlet
 eventlet.monkey_patch()
 from flask import Flask, request, jsonify
 from markupsafe import escape
-from configaryan1812 import *
-from aryanfunctions import *
+from config import *
+from functions import *
 from flask_cors import CORS
 import logging, time
 from flask_socketio import SocketIO, emit

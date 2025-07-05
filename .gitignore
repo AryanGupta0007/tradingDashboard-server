@@ -1,4 +1,6 @@
-configaryan1812.py
+config.py
 __pycache__/
 logs/
-instance/
+instance/*
+.idea/
+myenv/

@@ -293,8 +293,10 @@ def place_order_equity_dict(brokerobject, token, sym, order_type, entry_or_exit,
                 for e in order_state:
                     orderSym = list(e.keys())[0]
                     if orderSym == sym:
+                        print('herer')
                         e[orderSym]["id"] = id
                         e[orderSym]["entryId"] = orderid
+                        print(e[orderSym]["entryId"])
                         e[orderSym]["entryPrice"] = ltp
                         e[orderSym]["entryStatus"] = "COMPLETED"
                         e[orderSym]["exitStatus"] = "PENDING"
