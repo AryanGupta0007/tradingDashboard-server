@@ -1,6 +1,6 @@
 from SmartApi import SmartConnect         
 from SmartApi.smartWebSocketV2 import SmartWebSocketV2
-from configaryan1812 import *
+from config import *
 import logging,threading,time,sys
 import pandas as pd
 from datetime import datetime
